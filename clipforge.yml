@@ -1,0 +1,41 @@
+name: ClipForge scheduled check
+on:
+  schedule: [{cron: "*/10 * * * *"}]   # checks every 10 minutes (GitHub may delay runs a few minutes)
+  workflow_dispatch:
+concurrency: {group: clipforge, cancel-in-progress: false}   # never two runners recording at once
+permissions: {contents: write}                               # needed to host clips as release assets for Instagram
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    env:
+      GH_TOKEN: ${{ github.token }}
+      MAX_MINUTES: "340"
+      UPLOAD_GAP_SECONDS: "180"
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      AI_MODEL: ${{ vars.AI_MODEL }}
+      WHISPER_MODEL: ${{ vars.WHISPER_MODEL || 'small' }}
+      YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+      YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+      YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+      IG_USER_ID: ${{ secrets.IG_USER_ID }}
+      IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+      TT_CLIENT_KEY: ${{ secrets.TT_CLIENT_KEY }}
+      TT_CLIENT_SECRET: ${{ secrets.TT_CLIENT_SECRET }}
+      TT_REFRESH_TOKEN: ${{ secrets.TT_REFRESH_TOKEN }}
+      TT_PRIVACY: ${{ vars.TT_PRIVACY || 'SELF_ONLY' }}
+      HYPE_THRESHOLD: ${{ vars.HYPE_THRESHOLD || '3.0' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu
+      - run: pip install -r requirements.txt
+      - uses: actions/cache@v4            # keeps job history, upload spacing and rotated TikTok token between runs
+        with:
+          path: data/db.sqlite
+          key: db-${{ github.run_id }}
+          restore-keys: db-
+      - uses: actions/cache@v4
+        with: {path: ~/.cache/huggingface, key: whisper-${{ vars.WHISPER_MODEL || 'small' }}}
+      - run: mkdir -p data/out data/buf && python runner.py

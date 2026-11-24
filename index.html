@@ -1,0 +1,41 @@
+<!doctype html><html class="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ClipForge — GTA 6 Auto Clipper</title><script src="https://cdn.tailwindcss.com"></script>
+<style>body{background:#0b0b12;color:#e5e7eb}.c{background:#14141f;border:1px solid #23233a;border-radius:12px;padding:16px}
+input,select{background:#0b0b12;border:1px solid #2d2d4a;border-radius:6px;padding:4px 8px;width:100%}
+.b{background:#7c3aed;border-radius:8px;padding:6px 14px}.b:hover{background:#8b5cf6}.t{padding:8px 16px;border-radius:8px}.t.on{background:#7c3aed}</style></head>
+<body class="p-4 max-w-7xl mx-auto"><h1 class="text-2xl font-bold mb-3">⚡ ClipForge <span class="text-fuchsia-400 text-sm">GTA 6 · 24/7 auto pipeline</span></h1>
+<div class="flex gap-2 mb-4" id="tabs"></div><div id="v"></div>
+<script>
+const $=s=>document.querySelector(s),J=(u,o)=>fetch(u,o).then(r=>r.json()),P=(u,b,m='POST')=>J(u,{method:m,headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+const ST=["Hype Found","Clipping","AI Analyzing","Rendering 9:16","Uploading","Published"];let tab='Dashboard',logs=[],S={jobs:[],live:{},stats:{}};
+['Dashboard','Channels','Studio','Settings'].forEach(t=>{const b=document.createElement('button');b.textContent=t;b.className='t';b.onclick=()=>{tab=t;draw()};$('#tabs').append(b)});
+const es=new EventSource('/events');es.onmessage=e=>{logs.push(JSON.parse(e.data));logs=logs.slice(-150);if(tab=='Dashboard')feed()};
+const col={live:'text-green-400',hype:'text-orange-400',err:'text-red-400',warn:'text-yellow-400',up:'text-cyan-400',step:'text-gray-300'};
+function feed(){const f=$('#feed');if(f){f.innerHTML=logs.slice().reverse().map(l=>`<div class="${col[l.kind]||''}">${l.t} ${l.msg}</div>`).join('')}}
+async function poll(){S=await J('/api/state');if(tab=='Dashboard')dash()}setInterval(poll,2500);
+function dash(){const s=S.stats;$('#v').innerHTML=`<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">${[['Published today',s.today],['All-time',s.total],['Live channels',s.live],['Queue',s.queued]].map(x=>`<div class="c"><div class="text-gray-400 text-sm">${x[0]}</div><div class="text-3xl font-bold">${x[1]??0}</div></div>`).join('')}</div>
+<div class="c mb-4"><b>Live now</b> ${Object.values(S.live).map(l=>`<span class="ml-3">🔴 ${l.name} <span class="text-orange-400">hype ${l.hype}</span></span>`).join('')||'<span class="text-gray-500">monitoring…</span>'}</div>
+<div class="grid md:grid-cols-2 gap-4"><div class="space-y-3">${S.jobs.map(j=>{const d=JSON.parse(j.data||'{}'),k=ST.indexOf(j.stage);return`<div class="c"><div class="flex justify-between"><b>#${j.id} ${j.channel}</b><span class="text-sm ${j.status=='failed'?'text-red-400':j.status=='retry'?'text-yellow-400':'text-gray-400'}">${j.status}</span></div>
+<div class="flex gap-1 my-2">${ST.map((s,i)=>`<div class="flex-1 text-[10px] text-center rounded py-1 ${i<k||j.status=='done'?'bg-green-700':i==k?'bg-violet-600 animate-pulse':'bg-gray-800'}">${s}</div>`).join('')}</div>
+<div class="text-xs text-gray-400">${Object.entries(d.pub||{}).map(([p,u])=>`<a class="text-cyan-400 mr-2" href="${u.startsWith('http')?u:'#'}" target=_blank>${p} ✓</a>`).join('')}${j.error?`<span class="text-red-400">${j.error}</span>`:''}</div></div>`}).join('')||'<div class="c text-gray-500">No jobs yet.</div>'}</div>
+<div class="c"><b>Live activity</b><div id="feed" class="text-xs font-mono mt-2 h-[600px] overflow-auto"></div></div></div>`;feed()}
+async function chans(){const cs=await J('/api/channels');$('#v').innerHTML=`<div class="c mb-4 grid md:grid-cols-5 gap-2"><input id=n placeholder="Name"><select id=p><option>Twitch<option>YouTube<option>Kick</select><input id=h placeholder="@handle (credit)"><input id=u placeholder="https://twitch.tv/…"><button class=b onclick="add()">Add</button></div>
+${cs.map(c=>`<div class="c mb-2 flex justify-between items-center"><span><b>${c.name}</b> · ${c.platform} · ${c.handle} · <span class="text-gray-400">${c.url}</span></span><span><button class="b mr-2" onclick="tog(${c.id},${c.enabled?0:1})">${c.enabled?'Pause':'Resume'}</button><button class="b !bg-red-700" onclick="del(${c.id})">Delete</button></span></div>`).join('')}`;window._cs=cs}
+const add=async()=>{await P('/api/channels',{name:n.value,platform:p.value,handle:h.value,url:u.value});chans()},del=async i=>{await J('/api/channels/'+i,{method:'DELETE'});chans()},tog=async(i,e)=>{const c=_cs.find(x=>x.id==i);await P('/api/channels/'+i,{...c,enabled:e},'PUT');chans()};
+let L,cid=0;const gp=(o,p)=>p.split('.').reduce((a,k)=>a[k],o),sp=(o,p,v)=>{const a=p.split('.'),l=a.pop();a.reduce((x,k)=>x[k],o)[l]=v};
+const F=[['split',.4,.85,.005],['game.x',0,1,.01],['game.y',0,1,.01],['game.w',.1,1,.01],['game.h',.1,1,.01],['face.x',0,1,.01],['face.y',0,1,.01],['face.w',.1,1,.01],['face.h',.1,1,.01],['title.size',30,140,2],['title.x',0,1,.01],['title.y',0,1,.01],['cap.size',30,140,2],['cap.outline',0,12,1],['cap.x',0,1,.01],['cap.y',0,1,.01]],T=[['title.font'],['title.color'],['cap.font'],['cap.hl'],['cap.stroke']];
+async function studio(){const cs=await J('/api/channels');L=await J('/api/layout?channel_id='+cid);$('#v').innerHTML=`<div class="grid md:grid-cols-3 gap-4"><div class="c"><canvas id=cv width=270 height=480 class="mx-auto rounded"></canvas></div><div class="c md:col-span-2 grid grid-cols-2 gap-2">
+<div class="col-span-2">Preset <select id=ch onchange="cid=+this.value;studio()"><option value=0>Global default${cs.map(c=>`<option value=${c.id} ${c.id==cid?'selected':''}>${c.name}`).join('')}</select></div>
+${F.map(f=>`<label class="text-xs">${f[0]} <span id="o_${f[0]}">${gp(L,f[0])}</span><input type=range min=${f[1]} max=${f[2]} step=${f[3]} value=${gp(L,f[0])} oninput="sp(L,'${f[0]}',+this.value);o_${f[0].replace('.','\\.')}.textContent=this.value;pv()"></label>`).join('')}
+${T.map(f=>`<label class="text-xs">${f[0]}<input value="${gp(L,f[0])}" oninput="sp(L,'${f[0]}',this.value);pv()"></label>`).join('')}
+<label class="text-xs">title box <input type=checkbox ${L.title.box?'checked':''} onchange="L.title.box=this.checked;pv()"></label>
+<button class="b col-span-2" onclick="P('/api/layout',{channel_id:cid||null,layout:L}).then(()=>alert('Saved'))">Save preset</button></div></div>`;pv()}
+function pv(){const x=cv.getContext('2d'),k=.25,W=270,H=480,h1=L.split*H;x.fillStyle='#000';x.fillRect(0,0,W,H);x.fillStyle='#1e3a8a';x.fillRect(0,0,W,h1);x.fillStyle='#6d28d9';x.fillRect(0,h1,W,H-h1);x.fillStyle='#fff8';x.font='11px sans-serif';x.textAlign='center';
+x.fillText(`GAMEPLAY crop ${L.game.w}×${L.game.h}`,W/2,h1/2);x.fillText(`FACECAM crop ${L.face.w}×${L.face.h}`,W/2,h1+(H-h1)/2);
+x.textBaseline='middle';x.font=`bold ${L.title.size*k}px ${L.title.font}`;const t='EPIC HOOK',m=x.measureText(t).width;if(L.title.box){x.fillStyle='#000a';x.fillRect(L.title.x*W-m/2-6,L.title.y*H-L.title.size*k/2-3,m+12,L.title.size*k+6)}x.fillStyle=L.title.color;x.fillText(t,L.title.x*W,L.title.y*H);
+x.font=`bold ${L.cap.size*k}px ${L.cap.font}`;x.lineWidth=L.cap.outline*k;x.strokeStyle=L.cap.stroke;const a='THIS IS ',b='INSANE',wa=x.measureText(a).width,wb=x.measureText(b).width,sx=L.cap.x*W-(wa+wb)/2;x.textAlign='left';
+[[a,sx,'#fff'],[b,sx+wa,L.cap.hl]].forEach(([s,px,c])=>{x.strokeText(s,px,L.cap.y*H);x.fillStyle=c;x.fillText(s,px,L.cap.y*H)})}
+async function sets(){const s=await J('/api/settings');$('#v').innerHTML=`<div class="c grid md:grid-cols-2 gap-2">${Object.entries(s).map(([k,v])=>`<label class="text-xs">${k}<input name=${k} value="${v}" type="${/KEY|SECRET|TOKEN/.test(k)?'password':'text'}"></label>`).join('')}<button class="b md:col-span-2" onclick="sv()">Save settings</button></div>`}
+const sv=async()=>{const o={};document.querySelectorAll('#v input').forEach(i=>o[i.name]=i.value);await P('/api/settings',o);alert('Saved — applied live')};
+function draw(){document.querySelectorAll('.t').forEach(b=>b.classList.toggle('on',b.textContent==tab));({Dashboard:()=>{dash();poll()},Channels:chans,Studio:studio,Settings:sets})[tab]()}draw();
+</script></body></html>
